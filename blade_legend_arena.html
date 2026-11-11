@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blade Legend: Sword Arena</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Exo+2:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #090a0f;
+            font-family: 'Exo 2', sans-serif;
+            color: #f3f4f6;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        /* Custom Scrollbar for Shop */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(217, 119, 6, 0.6);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(245, 158, 11, 0.9);
+        }
+        /* HUD Glassmorphism */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .gold-glow {
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+        .red-glow {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+        /* Pulsing Health / Ult animation */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.8); }
+        }
+        .health-pulse {
+            animation: pulse-glow 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full bg-slate-950 text-slate-100 select-none overflow-hidden">
+
+    <!-- GAME CANVAS -->
+    <canvas id="gameCanvas" class="absolute inset-0 z-0 w-full h-full"></canvas>
+
+    <!-- TOP HUD OVERLAY -->
+    <div id="hudOverlay" class="absolute top-0 left-0 right-0 z-10 p-4 pointer-events-none flex flex-col justify-between h-full hidden">
+        <!-- TOP ROW BAR -->
+        <div class="flex justify-between items-start w-full gap-4">
+            <!-- PLAYER BARS & STATS -->
+            <div class="glass-panel rounded-2xl p-4 w-80 sm:w-96 flex flex-col gap-2.5 shadow-2xl pointer-events-auto">
+                <div class="flex items-center justify-between">
+                    <span id="hudPlayerClass" class="font-cinzel text-amber-400 font-bold tracking-wider text-sm">GLADIATOR</span>
+                    <span class="text-xs text-slate-400 font-semibold" id="hudPlayerLevel">LVL 1</span>
+                </div>
+
+                <!-- HEALTH BAR -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1 font-bold">
+                        <span class="text-red-400"><i class="fa-solid fa-heart mr-1"></i>HEALTH</span>
+                        <span id="hpText" class="text-slate-200">100 / 100</span>
+                    </div>
+                    <div class="w-full h-3.5 bg-slate-900/80 rounded-full p-0.5 border border-red-900/50 overflow-hidden relative">
+                        <div id="hpBar" class="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full transition-all duration-150 w-full shadow-lg"></div>
+                        <div id="shieldBar" class="absolute top-0 left-0 h-full bg-cyan-400/60 rounded-full transition-all duration-150 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- ENERGY BAR -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1 font-bold">
+                        <span class="text-cyan-400"><i class="fa-solid fa-bolt mr-1"></i>ENERGY</span>
+                        <span id="energyText" class="text-slate-200">100 / 100</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-900/80 rounded-full p-0.5 border border-cyan-900/50 overflow-hidden">
+                        <div id="energyBar" class="h-full bg-gradient-to-r from-cyan-600 to-blue-400 rounded-full transition-all duration-150 w-full"></div>
+                    </div>
+                </div>
+
+                <!-- ULTIMATE METER -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1 font-bold">
+                        <span class="text-amber-400"><i class="fa-solid fa-fire mr-1"></i>ULTIMATE</span>
+                        <span id="ultText" class="text-amber-300">0%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-900/80 rounded-full p-0.5 border border-amber-900/50 overflow-hidden">
+                        <div id="ultBar" class="h-full bg-gradient-to-r from-amber-600 via-yellow-400 to-orange-500 rounded-full transition-all duration-150 w-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WAVE & MATCH INFO -->
+            <div class="flex flex-col items-center gap-2">
+                <div class="glass-panel px-6 py-3 rounded-2xl text-center shadow-2xl">
+                    <div class="text-xs uppercase tracking-widest text-amber-500 font-bold">Current Wave</div>
+                    <div id="waveDisplay" class="font-cinzel text-3xl sm:text-4xl font-extrabold text-white tracking-wider">WAVE 1</div>
+                    <div id="enemiesRemaining" class="text-xs text-slate-400 font-medium mt-1">Enemies: 0</div>
+                </div>
+                <div id="bossBarContainer" class="hidden w-80 glass-panel p-2 rounded-xl flex flex-col gap-1 border-red-500/50">
+                    <div class="flex justify-between text-xs font-bold text-red-400 px-1">
+                        <span id="bossName">ARENA CHAMPION</span>
+                        <span id="bossHpText">1000/1000</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-red-800">
+                        <div id="bossHpBar" class="h-full bg-gradient-to-r from-red-800 via-red-600 to-orange-500 w-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GOLD & SCORE STATS -->
+            <div class="glass-panel rounded-2xl p-4 flex flex-col gap-2 min-w-[160px] text-right pointer-events-auto shadow-2xl">
+                <div>
+                    <div class="text-xs text-slate-400 uppercase font-semibold">Gold Earned</div>
+                    <div class="text-2xl font-black text-amber-400 gold-glow"><i class="fa-solid fa-coins text-amber-400 mr-1 text-lg"></i><span id="goldText">0</span></div>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 uppercase font-semibold">Arena Kills</div>
+                    <div class="text-xl font-bold text-slate-100" id="killsText">0</div>
+                </div>
+                <button id="shopBtn" class="mt-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-1.5 px-3 rounded-xl text-xs uppercase tracking-wider transition-all duration-150 shadow-lg active:scale-95 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-store"></i> Armory
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM ABILITY HOTBAR -->
+        <div class="flex justify-center items-end pb-2 pointer-events-auto">
+            <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-4 shadow-2xl">
+                <!-- ATTACK (LMB) -->
+                <div class="relative group flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 border-2 border-slate-600 flex items-center justify-center text-amber-400 text-lg font-bold shadow-md">
+                        <i class="fa-solid fa-hand-fist"></i>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-bold mt-1">LMB Attack</span>
+                </div>
+
+                <!-- PARRY (RMB) -->
+                <div class="relative group flex flex-col items-center">
+                    <div id="parryCdBox" class="w-12 h-12 rounded-xl bg-slate-800 border-2 border-cyan-500/60 flex items-center justify-center text-cyan-400 text-lg font-bold shadow-md relative overflow-hidden">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <div id="parryOverlay" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center text-xs font-bold text-cyan-300 hidden">0s</div>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-bold mt-1">RMB Parry</span>
+                </div>
+
+                <div class="h-8 w-px bg-slate-700/60"></div>
+
+                <!-- DASH (SPACE) -->
+                <div class="relative group flex flex-col items-center">
+                    <div id="dashCdBox" class="w-12 h-12 rounded-xl bg-slate-800 border-2 border-emerald-500/60 flex items-center justify-center text-emerald-400 text-lg font-bold shadow-md relative overflow-hidden">
+                        <i class="fa-solid fa-wind"></i>
+                        <div id="dashOverlay" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center text-xs font-bold text-emerald-300 hidden">0s</div>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-bold mt-1">SPACE Dash</span>
+                </div>
+
+                <!-- WEAPON SKILL (Q) -->
+                <div class="relative group flex flex-col items-center">
+                    <div id="skillQCdBox" class="w-12 h-12 rounded-xl bg-slate-800 border-2 border-purple-500/60 flex items-center justify-center text-purple-400 text-lg font-bold shadow-md relative overflow-hidden">
+                        <i id="skillQIcon" class="fa-solid fa-burst"></i>
+                        <div id="skillQOverlay" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center text-xs font-bold text-purple-300 hidden">0s</div>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-bold mt-1">[Q] Skill</span>
+                </div>
+
+                <!-- TACTICAL SKILL (E) -->
+                <div class="relative group flex flex-col items-center">
+                    <div id="skillECdBox" class="w-12 h-12 rounded-xl bg-slate-800 border-2 border-orange-500/60 flex items-center justify-center text-orange-400 text-lg font-bold shadow-md relative overflow-hidden">
+                        <i id="skillEIcon" class="fa-solid fa-circle-radiation"></i>
+                        <div id="skillEOverlay" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center text-xs font-bold text-orange-300 hidden">0s</div>
+                    </div>
+                    <span class="text-[10px] text-slate-300 font-bold mt-1">[E] Tactical</span>
+                </div>
+
+                <!-- ULTIMATE (SHIFT / R) -->
+                <div class="relative group flex flex-col items-center">
+                    <div id="ultBtnBox" class="w-14 h-14 rounded-xl bg-slate-800 border-2 border-amber-500 flex items-center justify-center text-amber-300 text-xl font-bold shadow-lg relative overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-meteor"></i>
+                        <div id="ultOverlay" class="absolute inset-0 bg-slate-950/85 flex items-center justify-center text-xs font-bold text-amber-400">READY</div>
+                    </div>
+                    <span class="text-[10px] text-amber-400 font-bold mt-1">[SHIFT] Ult</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- START / MAIN MENU MODAL -->
+    <div id="startMenuModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div class="glass-panel max-w-xl w-full rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl border border-amber-500/30">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-slate-950 text-4xl shadow-xl mb-4 border-2 border-amber-200">
+                <i class="fa-solid fa-shield-cat"></i>
+            </div>
+            <h1 class="font-cinzel text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 tracking-wider">BLADE LEGEND</h1>
+            <p class="text-sm text-slate-400 font-semibold tracking-widest mt-1 mb-6 uppercase">Gladiator Sword Arena</p>
+
+            <div class="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 text-left text-xs text-slate-300 mb-6 space-y-2">
+                <div class="font-bold text-amber-400 text-sm mb-1 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-gamepad"></i> Controls Overview:</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><span class="text-amber-300 font-bold">WASD / Arrows:</span> Move Hero</div>
+                    <div><span class="text-amber-300 font-bold">Mouse Pointer:</span> Aim Weapon</div>
+                    <div><span class="text-amber-300 font-bold">Left Click:</span> Attack / Fire</div>
+                    <div><span class="text-amber-300 font-bold">Right Click:</span> Parry / Block</div>
+                    <div><span class="text-amber-300 font-bold">SPACE:</span> Invulnerable Dash</div>
+                    <div><span class="text-amber-300 font-bold">Q & E Keys:</span> Special Skills</div>
+                    <div><span class="text-amber-300 font-bold">SHIFT / R:</span> Ultimate Skill</div>
+                    <div><span class="text-amber-300 font-bold">ESC / P:</span> Pause / Shop</div>
+                </div>
+            </div>
+
+            <button id="startGameBtn" class="w-full py-4 bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-slate-950 font-black text-lg tracking-wider rounded-2xl hover:brightness-110 active:scale-98 transition-all shadow-xl shadow-amber-900/40 uppercase">
+                Enter The Arena
+            </button>
+        </div>
+    </div>
+
+    <!-- ARMORY / SHOP MODAL -->
+    <div id="shopModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-5xl w-full h-[88vh] rounded-3xl p-6 flex flex-col shadow-2xl border border-slate-700">
+            <!-- SHOP HEADER -->
+            <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl font-bold">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-cinzel text-2xl font-bold text-amber-400">GRAND ARMORY</h2>
+                        <p class="text-xs text-slate-400">Unlock & equip 10 unique weapons and 10 armour sets</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block font-semibold">AVAILABLE GOLD</span>
+                        <span id="shopGoldText" class="text-2xl font-black text-amber-400 gold-glow"><i class="fa-solid fa-coins mr-1"></i>0</span>
+                    </div>
+                    <button id="closeShopBtn" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-lg font-bold transition-all">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB SELECTION -->
+            <div class="flex gap-4 my-4">
+                <button id="tabWeaponsBtn" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-amber-600 text-slate-950 shadow-md transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-gun"></i> Weapons (10)
+                </button>
+                <button id="tabArmoursBtn" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-shield"></i> Armour Sets (10)
+                </button>
+            </div>
+
+            <!-- SHOP GRID CONTAINER -->
+            <div id="shopGrid" class="flex-1 overflow-y-auto custom-scroll grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 pr-2">
+                <!-- Dynamically Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PAUSE MENU -->
+    <div id="pauseModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-sm w-full rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl border border-slate-700">
+            <h2 class="font-cinzel text-3xl font-extrabold text-amber-400 mb-2">GAME PAUSED</h2>
+            <p class="text-xs text-slate-400 mb-6">Take a breather, warrior.</p>
+            <div class="w-full flex flex-col gap-3">
+                <button id="resumeBtn" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-md">
+                    Resume Battle
+                </button>
+                <button id="pauseOpenShopBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold rounded-xl text-sm transition-all border border-amber-500/30">
+                    Open Armory
+                </button>
+                <button id="restartBtn" class="w-full py-3 bg-red-900/60 hover:bg-red-800 text-red-200 font-bold rounded-xl text-sm transition-all">
+                    Restart Arena
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER / VICTORY MODAL -->
+    <div id="gameOverModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-panel max-w-md w-full rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl border border-red-500/40">
+            <div class="w-20 h-20 rounded-2xl bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-400 text-4xl mb-4">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            <h2 id="gameOverTitle" class="font-cinzel text-4xl font-black text-red-500 red-glow">FALLEN IN COMBAT</h2>
+            <p id="gameOverSub" class="text-xs text-slate-400 mt-1 mb-6">Your blood nourishes the arena grounds.</p>
+
+            <div class="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex justify-around mb-6 text-center">
+                <div>
+                    <span class="text-xs text-slate-400 block font-semibold">WAVES SURVIVED</span>
+                    <span id="finalWave" class="text-2xl font-black text-amber-400">1</span>
+                </div>
+                <div class="h-10 w-px bg-slate-800"></div>
+                <div>
+                    <span class="text-xs text-slate-400 block font-semibold">TOTAL KILLS</span>
+                    <span id="finalKills" class="text-2xl font-black text-slate-100">0</span>
+                </div>
+                <div class="h-10 w-px bg-slate-800"></div>
+                <div>
+                    <span class="text-xs text-slate-400 block font-semibold">GOLD EARNED</span>
+                    <span id="finalGold" class="text-2xl font-black text-yellow-400">0</span>
+                </div>
+            </div>
+
+            <button id="restartGameOverBtn" class="w-full py-4 bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-black text-base rounded-2xl hover:brightness-110 transition-all shadow-xl uppercase">
+                Fight Again
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT GAME ENGINE -->
+    <script>
+        /* ==========================================================================
+           1. AUDIO SYNTHESIS ENGINE (Web Audio API - No External Sound Files Needed)
+           ========================================================================== */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playSlash() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+
+            playHit() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playParry() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc1.type = 'sine';
+                osc2.type = 'triangle';
+                osc1.frequency.setValueAtTime(1200, now);
+                osc2.frequency.setValueAtTime(1800, now);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.35);
+                osc2.stop(now + 0.35);
+            }
+
+            playMagic() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(800, now + 0.25);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playBow() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playExplosion() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+
+            playCoin() {
+                if (!this.ctx || this.muted) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        /* ==========================================================================
+           2. DATA DEFINITIONS (10 WEAPONS & 10 ARMOUR SETS)
+           ========================================================================== */
+        const WEAPONS = [
+            {
+                id: 'scythe',
+                name: 'Soul Harvest Scythe',
+                type: 'melee',
+                price: 0, // Starter
+                unlocked: true,
+                damage: 38,
+                attackSpeed: 1.1, // Attack delay in sec
+                range: 95,
+                arcAngle: Math.PI * 0.9, // 160 deg arc sweep
+                color: '#a855f7',
+                icon: 'fa-wheat-awn',
+                desc: 'Wide sweeping high-damage harvest cleave. Heals 8% of damage dealt.',
+                specialDesc: 'Reaper Whirl (Q): 360-degree dark arc swing.'
+            },
+            {
+                id: 'broadsword',
+                name: 'Gladiator Broadsword',
+                type: 'melee',
+                price: 150,
+                unlocked: false,
+                damage: 28,
+                attackSpeed: 0.65,
+                range: 75,
+                arcAngle: Math.PI * 0.6,
+                color: '#f59e0b',
+                icon: 'fa-shield-halved',
+                desc: 'Balanced physical slashes with high stun potential.',
+                specialDesc: 'Shield Bash (Q): Stuns enemies in front for 1.5s.'
+            },
+            {
+                id: 'twin_blades',
+                name: 'Twin Crimson Blades',
+                type: 'melee',
+                price: 300,
+                unlocked: false,
+                damage: 18,
+                attackSpeed: 0.3, // Ultra fast
+                range: 60,
+                arcAngle: Math.PI * 0.5,
+                color: '#ef4444',
+                icon: 'fa-xmarks-lines',
+                desc: 'Blazing fast double slashes slicing through groups.',
+                specialDesc: 'Flurry (Q): Executes 4 lightning-fast slashes.'
+            },
+            {
+                id: 'shadow_daggers',
+                name: 'Shadow Daggers',
+                type: 'melee',
+                price: 450,
+                unlocked: false,
+                damage: 22,
+                attackSpeed: 0.35,
+                range: 50,
+                arcAngle: Math.PI * 0.4,
+                color: '#10b981',
+                icon: 'fa-socks',
+                desc: 'High critical strike chance (+30%) & backstab bonus.',
+                specialDesc: 'Shadow Vanish (Q): Teleports behind target.'
+            },
+            {
+                id: 'composite_bow',
+                name: 'Elven Composite Bow',
+                type: 'ranged',
+                price: 600,
+                unlocked: false,
+                damage: 32,
+                attackSpeed: 0.5,
+                projectileSpeed: 14,
+                color: '#84cc16',
+                icon: 'fa-bow-arrow',
+                desc: 'Precision ranged piercing arrows.',
+                specialDesc: 'Volley Shot (Q): Fires a fan of 5 arrows.'
+            },
+            {
+                id: 'throwing_knives',
+                name: 'Assassin Knives',
+                type: 'ranged',
+                price: 800,
+                unlocked: false,
+                damage: 20,
+                attackSpeed: 0.35,
+                projectileSpeed: 16,
+                color: '#06b6d4',
+                icon: 'fa-cubes',
+                desc: 'Rapid multi-blade projectile barrage.',
+                specialDesc: 'Knife Fan (Q): Throws 7 blades in a 180-deg arc.'
+            },
+            {
+                id: 'shadow_katana',
+                name: 'Shadow Katana',
+                type: 'melee',
+                price: 1100,
+                unlocked: false,
+                damage: 42,
+                attackSpeed: 0.75,
+                range: 85,
+                arcAngle: Math.PI * 0.5,
+                color: '#8b5cf6',
+                icon: 'fa-hand-back-fist',
+                desc: 'Precision slashes leaving lingering slice trails.',
+                specialDesc: 'Dash Slash (Q): Forward thrust slicing all in line.'
+            },
+            {
+                id: 'titan_greatsword',
+                name: 'Titan Greatsword',
+                type: 'melee',
+                price: 1500,
+                unlocked: false,
+                damage: 65,
+                attackSpeed: 1.25,
+                range: 100,
+                arcAngle: Math.PI * 0.75,
+                color: '#f97316',
+                icon: 'fa-gavel',
+                desc: 'Massive heavy cleave creating impact shockwaves.',
+                specialDesc: 'Earthshaker (Q): Slams ground creating AoE shockwave.'
+            },
+            {
+                id: 'dragon_spear',
+                name: 'Dragon Fire Spear',
+                type: 'thrust',
+                price: 2000,
+                unlocked: false,
+                damage: 48,
+                attackSpeed: 0.7,
+                range: 120,
+                arcAngle: Math.PI * 0.25,
+                color: '#dc2626',
+                icon: 'fa-location-arrow',
+                desc: 'Long range thrusts piercing multiple enemies.',
+                specialDesc: 'Dragon Plunge (Q): Leap up and slam down.'
+            },
+            {
+                id: 'spellblade',
+                name: 'Arcane Staff & Blade',
+                type: 'magic',
+                price: 2800,
+                unlocked: false,
+                damage: 55,
+                attackSpeed: 0.6,
+                projectileSpeed: 12,
+                color: '#3b82f6',
+                icon: 'fa-wand-magic-sparkles',
+                desc: 'Fires bursting arcane orbs dealing magic damage.',
+                specialDesc: 'Arcane Nova (Q): Exploding ring of magic bolts.'
+            }
+        ];
+
+        const ARMOURS = [
+            {
+                id: 'recruit_leather',
+                name: "Recruit's Leather",
+                price: 0,
+                unlocked: true,
+                hpBonus: 20,
+                defBonus: 5,
+                speedBonus: 0.15,
+                color: '#78350f',
+                icon: 'fa-shirt',
+                desc: '+20 HP, +5 Def, +15% Move Speed.'
+            },
+            {
+                id: 'iron_chainmail',
+                name: 'Iron Chainmail',
+                price: 200,
+                unlocked: false,
+                hpBonus: 50,
+                defBonus: 15,
+                speedBonus: 0.0,
+                color: '#64748b',
+                icon: 'fa-vest',
+                desc: '+50 HP, +15 Def, solid poise resistance.'
+            },
+            {
+                id: 'knight_plate',
+                name: "Knight's Plate Armor",
+                price: 450,
+                unlocked: false,
+                hpBonus: 100,
+                defBonus: 30,
+                speedBonus: -0.05,
+                color: '#94a3b8',
+                icon: 'fa-shield',
+                desc: '+100 HP, +30 Def, 50% Knockback resistance.'
+            },
+            {
+                id: 'shadow_cloak',
+                name: 'Shadow Assassin Cloak',
+                price: 700,
+                unlocked: false,
+                hpBonus: 40,
+                defBonus: 10,
+                speedBonus: 0.25,
+                color: '#10b981',
+                icon: 'fa-user-ninja',
+                desc: '+40 HP, +25% Move Speed, +15% Crit Chance.'
+            },
+            {
+                id: 'dragon_scale',
+                name: 'Dragon Scale Armor',
+                price: 1000,
+                unlocked: false,
+                hpBonus: 120,
+                defBonus: 25,
+                speedBonus: 0.05,
+                color: '#ef4444',
+                icon: 'fa-dragon',
+                desc: '+120 HP, +25 Def. Emits periodic Flame Aura damaging surrounding foes.'
+            },
+            {
+                id: 'berserker_harness',
+                name: 'Berserker Harness',
+                price: 1400,
+                unlocked: false,
+                hpBonus: 80,
+                defBonus: 12,
+                speedBonus: 0.1,
+                color: '#ea580c',
+                icon: 'fa-fire-flame-curved',
+                desc: '+80 HP, Damage increases up to +100% as health drops.'
+            },
+            {
+                id: 'paladin_aegis',
+                name: 'Paladin Aegis',
+                price: 1800,
+                unlocked: false,
+                hpBonus: 150,
+                defBonus: 35,
+                speedBonus: 0.0,
+                color: '#f59e0b',
+                icon: 'fa-cross',
+                desc: '+150 HP, +35 Def. Generates 25 temporary Shield Points on successful Parry.'
+            },
+            {
+                id: 'cyber_void',
+                name: 'Void Energy Armor',
+                price: 2300,
+                unlocked: false,
+                hpBonus: 110,
+                defBonus: 20,
+                speedBonus: 0.2,
+                color: '#06b6d4',
+                icon: 'fa-atom',
+                desc: '+110 HP, 20% Dodge chance, +50% Energy regeneration.'
+            },
+            {
+                id: 'archmage_robes',
+                name: 'Archmage Robes',
+                price: 2900,
+                unlocked: false,
+                hpBonus: 90,
+                defBonus: 15,
+                speedBonus: 0.1,
+                color: '#a855f7',
+                icon: 'fa-hat-wizard',
+                desc: '+90 HP, -35% Cooldown on all special skills & +30% Skill damage.'
+            },
+            {
+                id: 'celestial_armor',
+                name: 'Celestial Divine Plate',
+                price: 3800,
+                unlocked: false,
+                hpBonus: 220,
+                defBonus: 45,
+                speedBonus: 0.1,
+                color: '#eab308',
+                icon: 'fa-sun',
+                desc: '+220 HP, +45 Def. Passive +4 HP/sec regen & low HP Invulnerability Pulse.'
+            }
+        ];
+
+        /* ==========================================================================
+           3. GAME ENGINE CLASS
+           ========================================================================== */
+        class GameEngine {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                // UI Elements
+                this.hudOverlay = document.getElementById('hudOverlay');
+                this.startMenuModal = document.getElementById('startMenuModal');
+                this.shopModal = document.getElementById('shopModal');
+                this.pauseModal = document.getElementById('pauseModal');
+                this.gameOverModal = document.getElementById('gameOverModal');
+
+                // State
+                this.state = 'MENU'; // MENU, PLAYING, PAUSED, SHOP, GAMEOVER
+                this.lastTime = performance.now();
+                this.wave = 1;
+                this.kills = 0;
+                this.gold = 100; // Starter gold bonus
+
+                // Screen Shake & Camera
+                this.shakeTime = 0;
+                this.shakeIntensity = 0;
+
+                // Input State
+                this.keys = {};
+                this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false, rightDown: false };
+
+                // Entities & Particles
+                this.player = null;
+                this.enemies = [];
+                this.projectiles = [];
+                this.slashes = [];
+                this.particles = [];
+                this.floats = [];
+                this.bloodStains = [];
+
+                // Equipment Selection
+                this.equippedWeapon = WEAPONS[0];
+                this.equippedArmour = ARMOURS[0];
+                this.weaponLevels = {};
+                this.armourLevels = {};
+
+                WEAPONS.forEach(w => this.weaponLevels[w.id] = 1);
+                ARMOURS.forEach(a => this.armourLevels[a.id] = 1);
+
+                // Wave Spawning
+                this.waveState = 'IN_PROGRESS'; // IN_PROGRESS, WAVE_CLEARED
+                this.enemiesToSpawn = 0;
+                this.spawnTimer = 0;
+                this.currentShopTab = 'weapons';
+
+                this.initCanvas();
+                this.bindEvents();
+            }
+
+            initCanvas() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            }
+
+            bindEvents() {
+                window.addEventListener('resize', () => this.initCanvas());
+
+                // Keyboard Listeners
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+
+                    if (this.state === 'PLAYING') {
+                        if (e.code === 'KeyQ') this.player.useSkillQ();
+                        if (e.code === 'KeyE') this.player.useSkillE();
+                        if (e.code === 'Space') this.player.useDash();
+                        if (e.code === 'ShiftLeft' || e.code === 'KeyR') this.player.useUltimate();
+                        if (e.code === 'Escape' || e.code === 'KeyP') this.togglePause();
+                    } else if (this.state === 'PAUSED' && (e.code === 'Escape' || e.code === 'KeyP')) {
+                        this.togglePause();
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+
+                // Mouse Listeners
+                window.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                    this.mouse.worldX = e.clientX;
+                    this.mouse.worldY = e.clientY;
+                });
+
+                this.canvas.addEventListener('mousedown', (e) => {
+                    audio.init();
+                    if (this.state !== 'PLAYING') return;
+                    if (e.button === 0) {
+                        this.mouse.down = true;
+                        this.player.attack();
+                    }
+                    if (e.button === 2) {
+                        e.preventDefault();
+                        this.mouse.rightDown = true;
+                        this.player.parry();
+                    }
+                });
+
+                this.canvas.addEventListener('mouseup', (e) => {
+                    if (e.button === 0) this.mouse.down = false;
+                    if (e.button === 2) this.mouse.rightDown = false;
+                });
+
+                this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+                // UI Button Listeners
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('shopBtn').addEventListener('click', () => this.openShop());
+                document.getElementById('closeShopBtn').addEventListener('click', () => this.closeShop());
+                document.getElementById('resumeBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('pauseOpenShopBtn').addEventListener('click', () => {
+                    this.pauseModal.classList.add('hidden');
+                    this.openShop();
+                });
+                document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+                document.getElementById('restartGameOverBtn').addEventListener('click', () => this.restartGame());
+                document.getElementById('tabWeaponsBtn').addEventListener('click', () => this.switchShopTab('weapons'));
+                document.getElementById('tabArmoursBtn').addEventListener('click', () => this.switchShopTab('armours'));
+                document.getElementById('ultBtnBox').addEventListener('click', () => {
+                    if (this.state === 'PLAYING') this.player.useUltimate();
+                });
+            }
+
+            startGame() {
+                audio.init();
+                this.state = 'PLAYING';
+                this.wave = 1;
+                this.kills = 0;
+                this.enemies = [];
+                this.projectiles = [];
+                this.slashes = [];
+                this.particles = [];
+                this.floats = [];
+                this.bloodStains = [];
+
+                this.player = new Player(this.width / 2, this.height / 2, this);
+                this.startMenuModal.classList.add('hidden');
+                this.gameOverModal.classList.add('hidden');
+                this.pauseModal.classList.add('hidden');
+                this.hudOverlay.classList.remove('hidden');
+
+                this.startWave();
+            }
+
+            restartGame() {
+                this.startGame();
+            }
+
+            togglePause() {
+                if (this.state === 'PLAYING') {
+                    this.state = 'PAUSED';
+                    this.pauseModal.classList.remove('hidden');
+                } else if (this.state === 'PAUSED') {
+                    this.state = 'PLAYING';
+                    this.pauseModal.classList.add('hidden');
+                }
+            }
+
+            openShop() {
+                this.state = 'SHOP';
+                this.shopModal.classList.remove('hidden');
+                this.renderShop();
+            }
+
+            closeShop() {
+                this.shopModal.classList.add('hidden');
+                this.state = 'PLAYING';
+            }
+
+            switchShopTab(tab) {
+                this.currentShopTab = tab;
+                const tabW = document.getElementById('tabWeaponsBtn');
+                const tabA = document.getElementById('tabArmoursBtn');
+                if (tab === 'weapons') {
+                    tabW.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-amber-600 text-slate-950 shadow-md transition-all flex items-center justify-center gap-2';
+                    tabA.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all flex items-center justify-center gap-2';
+                } else {
+                    tabA.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-amber-600 text-slate-950 shadow-md transition-all flex items-center justify-center gap-2';
+                    tabW.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all flex items-center justify-center gap-2';
+                }
+                this.renderShop();
+            }
+
+            renderShop() {
+                document.getElementById('shopGoldText').innerText = this.gold;
+                const grid = document.getElementById('shopGrid');
+                grid.innerHTML = '';
+
+                if (this.currentShopTab === 'weapons') {
+                    WEAPONS.forEach(w => {
+                        const isEquipped = this.equippedWeapon.id === w.id;
+                        const lvl = this.weaponLevels[w.id];
+                        const upgradeCost = Math.floor(w.price * 0.6 + lvl * 100);
+
+                        const card = document.createElement('div');
+                        card.className = `glass-panel rounded-2xl p-4 flex flex-col justify-between border ${isEquipped ? 'border-amber-500 bg-amber-950/20' : 'border-slate-800'}`;
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 text-xl">
+                                            <i class="fa-solid ${w.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-sm text-slate-100">${w.name}</h3>
+                                            <span class="text-[10px] text-amber-400/80 font-semibold uppercase">Lvl ${lvl} Weapon</span>
+                                        </div>
+                                    </div>
+                                    ${isEquipped ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/50">EQUIPPED</span>' : ''}
+                                </div>
+                                <p class="text-xs text-slate-300 mb-2">${w.desc}</p>
+                                <p class="text-[11px] text-purple-300 italic mb-3"><i class="fa-solid fa-bolt mr-1"></i>${w.specialDesc}</p>
+                                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400 mb-3 bg-slate-900/60 p-2 rounded-xl">
+                                    <div>Base DMG: <span class="text-amber-400 font-bold">${Math.round(w.damage * (1 + (lvl - 1) * 0.25))}</span></div>
+                                    <div>Attack Delay: <span class="text-cyan-400 font-bold">${w.attackSpeed}s</span></div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                ${!w.unlocked ? `
+                                    <button class="buy-btn flex-1 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs uppercase transition-all flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-coins"></i> Unlock (${w.price} G)
+                                    </button>
+                                ` : `
+                                    <button class="equip-btn flex-1 py-2 rounded-xl ${isEquipped ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'} font-bold text-xs uppercase transition-all">
+                                        ${isEquipped ? 'Equipped' : 'Equip'}
+                                    </button>
+                                    <button class="upgrade-btn flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs uppercase transition-all flex items-center justify-center gap-1">
+                                        Upgrade (${upgradeCost} G)
+                                    </button>
+                                `}
+                            </div>
+                        `;
+
+                        // Handlers
+                        if (!w.unlocked) {
+                            card.querySelector('.buy-btn').addEventListener('click', () => {
+                                if (this.gold >= w.price) {
+                                    this.gold -= w.price;
+                                    w.unlocked = true;
+                                    this.equippedWeapon = w;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                }
+                            });
+                        } else {
+                            if (!isEquipped) {
+                                card.querySelector('.equip-btn').addEventListener('click', () => {
+                                    this.equippedWeapon = w;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                });
+                            }
+                            card.querySelector('.upgrade-btn').addEventListener('click', () => {
+                                if (this.gold >= upgradeCost) {
+                                    this.gold -= upgradeCost;
+                                    this.weaponLevels[w.id]++;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                }
+                            });
+                        }
+                        grid.appendChild(card);
+                    });
+                } else {
+                    ARMOURS.forEach(a => {
+                        const isEquipped = this.equippedArmour.id === a.id;
+                        const lvl = this.armourLevels[a.id];
+                        const upgradeCost = Math.floor(a.price * 0.6 + lvl * 100);
+
+                        const card = document.createElement('div');
+                        card.className = `glass-panel rounded-2xl p-4 flex flex-col justify-between border ${isEquipped ? 'border-amber-500 bg-amber-950/20' : 'border-slate-800'}`;
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-400 text-xl">
+                                            <i class="fa-solid ${a.icon}"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-bold text-sm text-slate-100">${a.name}</h3>
+                                            <span class="text-[10px] text-cyan-400/80 font-semibold uppercase">Lvl ${lvl} Armor</span>
+                                        </div>
+                                    </div>
+                                    ${isEquipped ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/50">EQUIPPED</span>' : ''}
+                                </div>
+                                <p class="text-xs text-slate-300 mb-3">${a.desc}</p>
+                                <div class="grid grid-cols-2 gap-2 text-xs text-slate-400 mb-3 bg-slate-900/60 p-2 rounded-xl">
+                                    <div>Max HP: <span class="text-red-400 font-bold">+${Math.round(a.hpBonus * (1 + (lvl - 1) * 0.2))}</span></div>
+                                    <div>Defense: <span class="text-cyan-400 font-bold">+${Math.round(a.defBonus * (1 + (lvl - 1) * 0.2))}</span></div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                ${!a.unlocked ? `
+                                    <button class="buy-btn flex-1 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs uppercase transition-all flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-coins"></i> Unlock (${a.price} G)
+                                    </button>
+                                ` : `
+                                    <button class="equip-btn flex-1 py-2 rounded-xl ${isEquipped ? 'bg-slate-800 text-slate-500 cursor-default' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'} font-bold text-xs uppercase transition-all">
+                                        ${isEquipped ? 'Equipped' : 'Equip'}
+                                    </button>
+                                    <button class="upgrade-btn flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs uppercase transition-all flex items-center justify-center gap-1">
+                                        Upgrade (${upgradeCost} G)
+                                    </button>
+                                `}
+                            </div>
+                        `;
+
+                        if (!a.unlocked) {
+                            card.querySelector('.buy-btn').addEventListener('click', () => {
+                                if (this.gold >= a.price) {
+                                    this.gold -= a.price;
+                                    a.unlocked = true;
+                                    this.equippedArmour = a;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                }
+                            });
+                        } else {
+                            if (!isEquipped) {
+                                card.querySelector('.equip-btn').addEventListener('click', () => {
+                                    this.equippedArmour = a;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                });
+                            }
+                            card.querySelector('.upgrade-btn').addEventListener('click', () => {
+                                if (this.gold >= upgradeCost) {
+                                    this.gold -= upgradeCost;
+                                    this.armourLevels[a.id]++;
+                                    audio.playCoin();
+                                    this.renderShop();
+                                    this.updateHUD();
+                                }
+                            });
+                        }
+                        grid.appendChild(card);
+                    });
+                }
+            }
+
+            addScreenShake(intensity = 8, duration = 0.2) {
+                this.shakeIntensity = intensity;
+                this.shakeTime = duration;
+            }
+
+            startWave() {
+                this.waveState = 'IN_PROGRESS';
+                this.enemiesToSpawn = 5 + this.wave * 3;
+                this.spawnTimer = 0;
+                document.getElementById('waveDisplay').innerText = `WAVE ${this.wave}`;
+            }
+
+            spawnEnemy() {
+                // Determine spawn location outside edge
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                if (side === 0) { x = Math.random() * this.width; y = -30; }
+                else if (side === 1) { x = this.width + 30; y = Math.random() * this.height; }
+                else if (side === 2) { x = Math.random() * this.width; y = this.height + 30; }
+                else { x = -30; y = Math.random() * this.height; }
+
+                // Determine enemy type based on wave
+                let type = 'gladiator';
+                const r = Math.random();
+
+                if (this.wave % 5 === 0 && this.enemiesToSpawn === 1) {
+                    type = 'boss';
+                } else if (this.wave >= 3 && r < 0.25) {
+                    type = 'rogue';
+                } else if (this.wave >= 4 && r < 0.5) {
+                    type = 'archer';
+                } else if (this.wave >= 6 && r < 0.7) {
+                    type = 'orc';
+                }
+
+                this.enemies.push(new Enemy(x, y, type, this.wave, this));
+            }
+
+            addFloatingText(x, y, text, color = '#ffffff', isCrit = false) {
+                this.floats.push({
+                    x, y, text, color, isCrit,
+                    alpha: 1.0,
+                    vy: -2,
+                    life: 0.8
+                });
+            }
+
+            addBloodStain(x, y) {
+                if (this.bloodStains.length > 50) this.bloodStains.shift();
+                this.bloodStains.push({
+                    x, y,
+                    radius: 8 + Math.random() * 14,
+                    alpha: 0.6,
+                    color: Math.random() > 0.5 ? '#7f1d1d' : '#991b1b'
+                });
+            }
+
+            update(dt) {
+                if (this.state !== 'PLAYING') return;
+
+                // Update Camera Shake
+                if (this.shakeTime > 0) {
+                    this.shakeTime -= dt;
+                }
+
+                // Player Update
+                if (this.player) {
+                    this.player.update(dt);
+                }
+
+                // Wave Spawner Engine
+                if (this.enemiesToSpawn > 0) {
+                    this.spawnTimer -= dt;
+                    if (this.spawnTimer <= 0) {
+                        this.spawnEnemy();
+                        this.enemiesToSpawn--;
+                        this.spawnTimer = Math.max(0.4, 1.8 - this.wave * 0.1);
+                    }
+                } else if (this.enemies.length === 0 && this.waveState === 'IN_PROGRESS') {
+                    // Wave Cleared!
+                    this.waveState = 'WAVE_CLEARED';
+                    this.gold += 50 + this.wave * 25;
+                    audio.playCoin();
+                    this.addFloatingText(this.width / 2, this.height / 2 - 50, "WAVE CLEARED!", "#f59e0b", true);
+                    setTimeout(() => {
+                        this.wave++;
+                        this.startWave();
+                    }, 2000);
+                }
+
+                // Update Enemies
+                for (let i = this.enemies.length - 1; i >= 0; i--) {
+                    const e = this.enemies[i];
+                    e.update(dt);
+                    if (e.dead) {
+                        this.kills++;
+                        this.gold += e.goldValue;
+                        this.addBloodStain(e.x, e.y);
+                        this.enemies.splice(i, 1);
+                    }
+                }
+
+                // Update Projectiles
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const p = this.projectiles[i];
+                    p.update(dt);
+                    if (p.dead) this.projectiles.splice(i, 1);
+                }
+
+                // Update Slashes FX
+                for (let i = this.slashes.length - 1; i >= 0; i--) {
+                    const s = this.slashes[i];
+                    s.life -= dt;
+                    if (s.life <= 0) this.slashes.splice(i, 1);
+                }
+
+                // Update Particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const pt = this.particles[i];
+                    pt.x += pt.vx;
+                    pt.y += pt.vy;
+                    pt.life -= dt;
+                    if (pt.life <= 0) this.particles.splice(i, 1);
+                }
+
+                // Update Floating Text
+                for (let i = this.floats.length - 1; i >= 0; i--) {
+                    const ft = this.floats[i];
+                    ft.y += ft.vy;
+                    ft.life -= dt;
+                    ft.alpha = ft.life / 0.8;
+                    if (ft.life <= 0) this.floats.splice(i, 1);
+                }
+
+                this.updateHUD();
+            }
+
+            updateHUD() {
+                if (!this.player) return;
+                document.getElementById('hpText').innerText = `${Math.ceil(this.player.hp)} / ${this.player.maxHp}`;
+                document.getElementById('hpBar').style.width = `${Math.max(0, (this.player.hp / this.player.maxHp) * 100)}%`;
+                
+                const shieldPct = Math.min(100, (this.player.shield / this.player.maxHp) * 100);
+                document.getElementById('shieldBar').style.width = `${shieldPct}%`;
+
+                document.getElementById('energyText').innerText = `${Math.ceil(this.player.energy)} / ${this.player.maxEnergy}`;
+                document.getElementById('energyBar').style.width = `${(this.player.energy / this.player.maxEnergy) * 100}%`;
+
+                document.getElementById('ultText').innerText = `${Math.floor(this.player.ultMeter)}%`;
+                document.getElementById('ultBar').style.width = `${this.player.ultMeter}%`;
+
+                const ultOverlay = document.getElementById('ultOverlay');
+                if (this.player.ultMeter >= 100) {
+                    ultOverlay.innerText = "READY";
+                    ultOverlay.classList.remove('bg-slate-950/85');
+                    ultOverlay.classList.add('bg-amber-500/30', 'animate-pulse');
+                } else {
+                    ultOverlay.innerText = `${Math.floor(this.player.ultMeter)}%`;
+                    ultOverlay.classList.add('bg-slate-950/85');
+                    ultOverlay.classList.remove('bg-amber-500/30', 'animate-pulse');
+                }
+
+                document.getElementById('goldText').innerText = this.gold;
+                document.getElementById('killsText').innerText = this.kills;
+                document.getElementById('enemiesRemaining').innerText = `Enemies Left: ${this.enemies.length + this.enemiesToSpawn}`;
+
+                // Cooldown Overlays
+                this.updateCooldownBox('parryOverlay', this.player.parryCd);
+                this.updateCooldownBox('dashOverlay', this.player.dashCd);
+                this.updateCooldownBox('skillQOverlay', this.player.skillQCd);
+                this.updateCooldownBox('skillEOverlay', this.player.skillECd);
+
+                // Boss Health Bar HUD
+                const boss = this.enemies.find(e => e.type === 'boss');
+                const bossHud = document.getElementById('bossBarContainer');
+                if (boss) {
+                    bossHud.classList.remove('hidden');
+                    document.getElementById('bossHpText').innerText = `${Math.ceil(boss.hp)} / ${boss.maxHp}`;
+                    document.getElementById('bossHpBar').style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+                } else {
+                    bossHud.classList.add('hidden');
+                }
+            }
+
+            updateCooldownBox(elementId, cdValue) {
+                const el = document.getElementById(elementId);
+                if (cdValue > 0) {
+                    el.classList.remove('hidden');
+                    el.innerText = `${cdValue.toFixed(1)}s`;
+                } else {
+                    el.classList.add('hidden');
+                }
+            }
+
+            triggerGameOver() {
+                this.state = 'GAMEOVER';
+                document.getElementById('finalWave').innerText = this.wave;
+                document.getElementById('finalKills').innerText = this.kills;
+                document.getElementById('finalGold').innerText = this.gold;
+                this.hudOverlay.classList.add('hidden');
+                this.gameOverModal.classList.remove('hidden');
+            }
+
+            render() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                this.ctx.save();
+                // Screen Shake Camera Offset
+                if (this.shakeTime > 0) {
+                    const dx = (Math.random() - 0.5) * this.shakeIntensity;
+                    const dy = (Math.random() - 0.5) * this.shakeIntensity;
+                    this.ctx.translate(dx, dy);
+                }
+
+                // Render Arena Environment Background
+                this.renderArena();
+
+                // Render Bloodstains
+                this.bloodStains.forEach(b => {
+                    this.ctx.beginPath();
+                    this.ctx.fillStyle = b.color;
+                    this.ctx.globalAlpha = b.alpha;
+                    this.ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1.0;
+                });
+
+                // Render Slashes FX
+                this.slashes.forEach(s => {
+                    this.ctx.save();
+                    this.ctx.beginPath();
+                    this.ctx.strokeStyle = s.color;
+                    this.ctx.lineWidth = s.width || 8;
+                    this.ctx.globalAlpha = s.life / (s.maxLife || 0.2);
+                    this.ctx.arc(s.x, s.y, s.radius, s.startAngle, s.endAngle);
+                    this.ctx.stroke();
+                    this.ctx.restore();
+                });
+
+                // Render Enemies
+                this.enemies.forEach(e => e.draw(this.ctx));
+
+                // Render Player
+                if (this.player) this.player.draw(this.ctx);
+
+                // Render Projectiles
+                this.projectiles.forEach(p => p.draw(this.ctx));
+
+                // Render Particles
+                this.particles.forEach(pt => {
+                    this.ctx.beginPath();
+                    this.ctx.fillStyle = pt.color;
+                    this.ctx.globalAlpha = pt.life / (pt.maxLife || 0.4);
+                    this.ctx.arc(pt.x, pt.y, pt.size || 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1.0;
+                });
+
+                // Render Floating Damage Numbers
+                this.floats.forEach(ft => {
+                    this.ctx.save();
+                    this.ctx.font = ft.isCrit ? '900 18px "Cinzel"' : '700 14px "Exo 2"';
+                    this.ctx.fillStyle = ft.color;
+                    this.ctx.globalAlpha = ft.alpha;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(ft.text, ft.x, ft.y);
+                    this.ctx.restore();
+                });
+
+                this.ctx.restore();
+            }
+
+            renderArena() {
+                // Arena Floor Tiles
+                this.ctx.fillStyle = '#0f172a';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                // Tile Grid Overlay
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                this.ctx.lineWidth = 1;
+                const tileSize = 80;
+                for (let x = 0; x < this.width; x += tileSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.height; y += tileSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.width, y);
+                    this.ctx.stroke();
+                }
+
+                // Central Arena Circle Emblem
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = 'rgba(245, 158, 11, 0.15)';
+                this.ctx.lineWidth = 4;
+                this.ctx.arc(this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.35, 0, Math.PI * 2);
+                this.ctx.stroke();
+
+                this.ctx.beginPath();
+                this.ctx.arc(this.width / 2, this.height / 2, Math.min(this.width, this.height) * 0.38, 0, Math.PI * 2);
+                this.ctx.setLineDash([10, 15]);
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
+            run() {
+                const loop = (now) => {
+                    const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+                    this.lastTime = now;
+
+                    this.update(dt);
+                    this.render();
+
+                    requestAnimationFrame(loop);
+                };
+                requestAnimationFrame(loop);
+            }
+        }
+
+        /* ==========================================================================
+           4. PLAYER ENTITY CLASS
+           ========================================================================== */
+        class Player {
+            constructor(x, y, game) {
+                this.x = x;
+                this.y = y;
+                this.game = game;
+                this.radius = 22;
+
+                // Base Stats
+                this.speed = 280;
+                this.angle = 0;
+
+                // Equipment setup
+                this.weapon = game.equippedWeapon;
+                this.armour = game.equippedArmour;
+                this.wLvl = game.weaponLevels[this.weapon.id] || 1;
+                this.aLvl = game.armourLevels[this.armour.id] || 1;
+
+                // Derived Stats
+                this.maxHp = 100 + Math.round(this.armour.hpBonus * (1 + (this.aLvl - 1) * 0.2));
+                this.hp = this.maxHp;
+                this.shield = 0;
+                this.maxEnergy = 100;
+                this.energy = 100;
+                this.ultMeter = 0;
+
+                this.defense = Math.round(this.armour.defBonus * (1 + (this.aLvl - 1) * 0.2));
+                this.moveSpeedMult = 1 + this.armour.speedBonus;
+
+                // Timers & Cooldowns
+                this.attackCd = 0;
+                this.parryCd = 0;
+                this.isParrying = false;
+                this.parryTimer = 0;
+                this.dashCd = 0;
+                this.isDashing = false;
+                this.dashTimer = 0;
+
+                this.skillQCd = 0;
+                this.skillECd = 0;
+
+                // Passives
+                this.flameAuraTimer = 0;
+                this.invulnerablePulseCd = 0;
+
+                // Visual FX
+                this.trail = [];
+            }
+
+            update(dt) {
+                // Movement Handling
+                let moveX = 0;
+                let moveY = 0;
+                if (this.game.keys['KeyW'] || this.game.keys['ArrowUp']) moveY -= 1;
+                if (this.game.keys['KeyS'] || this.game.keys['ArrowDown']) moveY += 1;
+                if (this.game.keys['KeyA'] || this.game.keys['ArrowLeft']) moveX -= 1;
+                if (this.game.keys['KeyD'] || this.game.keys['ArrowRight']) moveX += 1;
+
+                // Normalize movement vector
+                if (moveX !== 0 && moveY !== 0) {
+                    moveX *= 0.7071;
+                    moveY *= 0.7071;
+                }
+
+                // Apply Dash vs Normal Speed
+                const currentSpeed = this.isDashing ? this.speed * 3.2 : this.speed * this.moveSpeedMult;
+                this.x += moveX * currentSpeed * dt;
+                this.y += moveY * currentSpeed * dt;
+
+                // Clamp to Screen Boundaries
+                this.x = Math.max(this.radius, Math.min(this.game.width - this.radius, this.x));
+                this.y = Math.max(this.radius, Math.min(this.game.height - this.radius, this.y));
+
+                // Aim angle towards mouse
+                this.angle = Math.atan2(this.game.mouse.y - this.y, this.game.mouse.x - this.x);
+
+                // Energy Regen
+                const energyRegenRate = this.armour.id === 'cyber_void' ? 25 : 15;
+                this.energy = Math.min(this.maxEnergy, this.energy + energyRegenRate * dt);
+
+                // Passive Celestial Regen
+                if (this.armour.id === 'celestial_armor') {
+                    this.hp = Math.min(this.maxHp, this.hp + 4 * dt);
+                }
+
+                // Passive Dragon Scale Flame Aura
+                if (this.armour.id === 'dragon_scale') {
+                    this.flameAuraTimer += dt;
+                    if (this.flameAuraTimer >= 1.0) {
+                        this.flameAuraTimer = 0;
+                        this.triggerFlameAura();
+                    }
+                }
+
+                // Cooldown decrements
+                if (this.attackCd > 0) this.attackCd -= dt;
+                if (this.parryCd > 0) this.parryCd -= dt;
+                if (this.dashCd > 0) this.dashCd -= dt;
+                if (this.skillQCd > 0) this.skillQCd -= dt;
+                if (this.skillECd > 0) this.skillECd -= dt;
+
+                // Active State Timers
+                if (this.isParrying) {
+                    this.parryTimer -= dt;
+                    if (this.parryTimer <= 0) this.isParrying = false;
+                }
+                if (this.isDashing) {
+                    this.dashTimer -= dt;
+                    this.trail.push({ x: this.x, y: this.y, alpha: 0.6 });
+                    if (this.dashTimer <= 0) this.isDashing = false;
+                }
+
+                // Update Trails
+                for (let i = this.trail.length - 1; i >= 0; i--) {
+                    this.trail[i].alpha -= dt * 3;
+                    if (this.trail[i].alpha <= 0) this.trail.splice(i, 1);
+                }
+            }
+
+            getDamageMultiplier() {
+                let mult = 1.0;
+                // Weapon Level upgrade scaling (+25% per lvl)
+                mult *= (1 + (this.wLvl - 1) * 0.25);
+
+                // Berserker Harness Passive
+                if (this.armour.id === 'berserker_harness') {
+                    const hpRatio = this.hp / this.maxHp;
+                    mult += (1.0 - hpRatio); // Up to +100% bonus at low HP
+                }
+
+                // Archmage Robes Skill boost
+                if (this.armour.id === 'archmage_robes') {
+                    mult += 0.3;
+                }
+
+                return mult;
+            }
+
+            attack() {
+                if (this.attackCd > 0 || this.isParrying) return;
+
+                const baseDmg = this.weapon.damage * this.getDamageMultiplier();
+                let isCrit = Math.random() < (this.armour.id === 'shadow_cloak' ? 0.35 : 0.15);
+                if (this.weapon.id === 'shadow_daggers') isCrit = true;
+
+                const finalDmg = isCrit ? baseDmg * 2.2 : baseDmg;
+                this.attackCd = this.weapon.attackSpeed;
+
+                if (this.weapon.type === 'melee' || this.weapon.type === 'thrust') {
+                    audio.playSlash();
+
+                    // Add Slash Arc FX
+                    this.game.slashes.push({
+                        x: this.x,
+                        y: this.y,
+                        radius: this.weapon.range,
+                        startAngle: this.angle - (this.weapon.arcAngle / 2),
+                        endAngle: this.angle + (this.weapon.arcAngle / 2),
+                        color: this.weapon.color,
+                        width: 10,
+                        life: 0.15,
+                        maxLife: 0.15
+                    });
+
+                    // Detect hit enemies in arc
+                    this.game.enemies.forEach(e => {
+                        const dist = Math.hypot(e.x - this.x, e.y - this.y);
+                        if (dist <= this.weapon.range + e.radius) {
+                            const angleToEnemy = Math.atan2(e.y - this.y, e.x - this.x);
+                            let diff = Math.abs(angleToEnemy - this.angle);
+                            if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+                            if (diff <= this.weapon.arcAngle / 2 + 0.3) {
+                                e.takeDamage(finalDmg, isCrit);
+                                // Scythe Lifesteal
+                                if (this.weapon.id === 'scythe') {
+                                    this.hp = Math.min(this.maxHp, this.hp + finalDmg * 0.08);
+                                }
+                                this.ultMeter = Math.min(100, this.ultMeter + 4);
+                            }
+                        }
+                    });
+                } else if (this.weapon.type === 'ranged' || this.weapon.type === 'magic') {
+                    if (this.weapon.type === 'ranged') audio.playBow();
+                    else audio.playMagic();
+
+                    this.game.projectiles.push(new Projectile(
+                        this.x, this.y,
+                        Math.cos(this.angle), Math.sin(this.angle),
+                        this.weapon.projectileSpeed,
+                        finalDmg,
+                        true,
+                        this.weapon.color,
+                        this.game
+                    ));
+                    this.ultMeter = Math.min(100, this.ultMeter + 3);
+                }
+            }
+
+            parry() {
+                if (this.parryCd > 0 || this.energy < 15) return;
+                this.energy -= 15;
+                this.isParrying = true;
+                this.parryTimer = 0.4; // 400ms parry window
+                this.parryCd = 1.2;
+                audio.playParry();
+
+                // Spark burst effect
+                for (let i = 0; i < 12; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    this.game.particles.push({
+                        x: this.x + Math.cos(a) * 20,
+                        y: this.y + Math.sin(a) * 20,
+                        vx: Math.cos(a) * 5,
+                        vy: Math.sin(a) * 5,
+                        color: '#38bdf8',
+                        life: 0.3,
+                        size: 3
+                    });
+                }
+            }
+
+            useDash() {
+                if (this.dashCd > 0 || this.energy < 20) return;
+                this.energy -= 20;
+                this.isDashing = true;
+                this.dashTimer = 0.22;
+                this.dashCd = 1.0;
+                audio.playSlash();
+            }
+
+            useSkillQ() {
+                const cdMult = this.armour.id === 'archmage_robes' ? 0.65 : 1.0;
+                if (this.skillQCd > 0 || this.energy < 30) return;
+                this.energy -= 30;
+                this.skillQCd = 4.0 * cdMult;
+
+                audio.playExplosion();
+                this.game.addScreenShake(6, 0.2);
+
+                // Execute Weapon Special Action
+                const dmg = this.weapon.damage * 2.5 * this.getDamageMultiplier();
+
+                if (this.weapon.id === 'composite_bow') {
+                    // Volley 5 arrows
+                    for (let i = -2; i <= 2; i++) {
+                        const spreadAngle = this.angle + (i * 0.15);
+                        this.game.projectiles.push(new Projectile(
+                            this.x, this.y,
+                            Math.cos(spreadAngle), Math.sin(spreadAngle),
+                            15, dmg * 0.7, true, '#84cc16', this.game
+                        ));
+                    }
+                } else if (this.weapon.id === 'throwing_knives') {
+                    // Fan of 7 knives
+                    for (let i = -3; i <= 3; i++) {
+                        const spreadAngle = this.angle + (i * 0.2);
+                        this.game.projectiles.push(new Projectile(
+                            this.x, this.y,
+                            Math.cos(spreadAngle), Math.sin(spreadAngle),
+                            18, dmg * 0.6, true, '#06b6d4', this.game
+                        ));
+                    }
+                } else if (this.weapon.id === 'spellblade') {
+                    // Arcane Nova 8 orbs
+                    for (let i = 0; i < 8; i++) {
+                        const a = (Math.PI * 2 / 8) * i;
+                        this.game.projectiles.push(new Projectile(
+                            this.x, this.y,
+                            Math.cos(a), Math.sin(a),
+                            10, dmg * 0.8, true, '#3b82f6', this.game
+                        ));
+                    }
+                } else {
+                    // Melee AoE Spin/Blast
+                    this.game.slashes.push({
+                        x: this.x, y: this.y,
+                        radius: 120, startAngle: 0, endAngle: Math.PI * 2,
+                        color: this.weapon.color, width: 14, life: 0.25, maxLife: 0.25
+                    });
+
+                    this.game.enemies.forEach(e => {
+                        if (Math.hypot(e.x - this.x, e.y - this.y) <= 135) {
+                            e.takeDamage(dmg, true);
+                        }
+                    });
+                }
+            }
+
+            useSkillE() {
+                const cdMult = this.armour.id === 'archmage_robes' ? 0.65 : 1.0;
+                if (this.skillECd > 0 || this.energy < 25) return;
+                this.energy -= 25;
+                this.skillECd = 5.0 * cdMult;
+
+                audio.playMagic();
+                // Tactical Blast & Repel Shockwave
+                this.game.addScreenShake(8, 0.25);
+                this.game.enemies.forEach(e => {
+                    const dist = Math.hypot(e.x - this.x, e.y - this.y);
+                    if (dist <= 160) {
+                        const pushAngle = Math.atan2(e.y - this.y, e.x - this.x);
+                        e.x += Math.cos(pushAngle) * 80;
+                        e.y += Math.sin(pushAngle) * 80;
+                        e.takeDamage(40 * this.getDamageMultiplier(), false);
+                    }
+                });
+
+                // Spark Ring
+                for (let i = 0; i < 20; i++) {
+                    const a = (Math.PI * 2 / 20) * i;
+                    this.game.particles.push({
+                        x: this.x + Math.cos(a) * 40,
+                        y: this.y + Math.sin(a) * 40,
+                        vx: Math.cos(a) * 7,
+                        vy: Math.sin(a) * 7,
+                        color: '#f97316',
+                        life: 0.4, size: 4
+                    });
+                }
+            }
+
+            useUltimate() {
+                if (this.ultMeter < 100) return;
+                this.ultMeter = 0;
+                audio.playExplosion();
+                this.game.addScreenShake(18, 0.6);
+
+                this.game.addFloatingText(this.width / 2, this.height / 2 - 80, "DOMINION ULTIMATE!", "#f59e0b", true);
+
+                // Screen Clearing Particle Tempest
+                for (let i = 0; i < 80; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    const speed = 5 + Math.random() * 12;
+                    this.game.particles.push({
+                        x: this.x, y: this.y,
+                        vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+                        color: Math.random() > 0.5 ? '#f59e0b' : '#ef4444',
+                        life: 0.6, size: 6
+                    });
+                }
+
+                // Obliterate all active enemies in massive area
+                this.game.enemies.forEach(e => {
+                    e.takeDamage(220 * this.getDamageMultiplier(), true);
+                });
+            }
+
+            triggerFlameAura() {
+                this.game.enemies.forEach(e => {
+                    if (Math.hypot(e.x - this.x, e.y - this.y) <= 120) {
+                        e.takeDamage(15, false);
+                        this.game.particles.push({
+                            x: e.x, y: e.y, vx: 0, vy: -2, color: '#ef4444', life: 0.3, size: 3
+                        });
+                    }
+                });
+            }
+
+            takeDamage(amount) {
+                if (this.isDashing) return; // i-frames during dash
+
+                // Void Dodge Chance
+                if (this.armour.id === 'cyber_void' && Math.random() < 0.2) {
+                    this.game.addFloatingText(this.x, this.y - 20, "DODGE!", "#06b6d4", true);
+                    return;
+                }
+
+                if (this.isParrying) {
+                    audio.playParry();
+                    this.game.addFloatingText(this.x, this.y - 20, "PARRIED!", "#38bdf8", true);
+                    if (this.armour.id === 'paladin_aegis') {
+                        this.shield = Math.min(100, this.shield + 25);
+                    }
+                    return;
+                }
+
+                // Calculate Net Damage after armor defense
+                const netDamage = Math.max(2, amount - (this.defense * 0.4));
+
+                // Absorb via Shield first
+                let remainingDmg = netDamage;
+                if (this.shield > 0) {
+                    if (this.shield >= remainingDmg) {
+                        this.shield -= remainingDmg;
+                        remainingDmg = 0;
+                    } else {
+                        remainingDmg -= this.shield;
+                        this.shield = 0;
+                    }
+                }
+
+                this.hp -= remainingDmg;
+                audio.playHit();
+                this.game.addScreenShake(6, 0.15);
+                this.game.addFloatingText(this.x, this.y - 20, `-${Math.round(netDamage)}`, '#ef4444');
+
+                // Celestial Armor Emergency Invulnerability Pulse
+                if (this.hp <= 0 && this.armour.id === 'celestial_armor' && this.invulnerablePulseCd <= 0) {
+                    this.hp = 50;
+                    this.invulnerablePulseCd = 60;
+                    this.game.addFloatingText(this.x, this.y - 40, "DIVINE RESURRECTION!", "#eab308", true);
+                    return;
+                }
+
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    this.game.triggerGameOver();
+                }
+            }
+
+            draw(ctx) {
+                // Render Dash Trails
+                this.trail.forEach(t => {
+                    ctx.beginPath();
+                    ctx.fillStyle = this.weapon.color;
+                    ctx.globalAlpha = t.alpha * 0.4;
+                    ctx.arc(t.x, t.y, this.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                });
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Draw Parry Shield Bubble
+                if (this.isParrying) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 4;
+                    ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Draw Body
+                ctx.beginPath();
+                ctx.fillStyle = this.armour.color;
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Rotate weapon towards aim
+                ctx.rotate(this.angle);
+
+                // Draw Weapon Representation
+                ctx.beginPath();
+                ctx.fillStyle = this.weapon.color;
+                ctx.fillRect(10, -3, this.weapon.range * 0.6, 6);
+
+                ctx.restore();
+            }
+        }
+
+        /* ==========================================================================
+           5. ENEMY CLASS
+           ========================================================================== */
+        class Enemy {
+            constructor(x, y, type, wave, game) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.game = game;
+                this.dead = false;
+
+                // Base Configs by Type
+                if (type === 'gladiator') {
+                    this.radius = 18;
+                    this.maxHp = 60 + wave * 15;
+                    this.speed = 130 + wave * 3;
+                    this.damage = 12 + wave * 2;
+                    this.color = '#ef4444';
+                    this.goldValue = 15;
+                } else if (type === 'rogue') {
+                    this.radius = 15;
+                    this.maxHp = 40 + wave * 10;
+                    this.speed = 190 + wave * 4;
+                    this.damage = 18 + wave * 2.5;
+                    this.color = '#10b981';
+                    this.goldValue = 25;
+                } else if (type === 'orc') {
+                    this.radius = 26;
+                    this.maxHp = 140 + wave * 30;
+                    this.speed = 85 + wave * 2;
+                    this.damage = 25 + wave * 4;
+                    this.color = '#ea580c';
+                    this.goldValue = 40;
+                } else if (type === 'archer') {
+                    this.radius = 16;
+                    this.maxHp = 50 + wave * 12;
+                    this.speed = 110 + wave * 2;
+                    this.damage = 14 + wave * 2;
+                    this.color = '#84cc16';
+                    this.goldValue = 30;
+                    this.shootTimer = 2.0;
+                } else if (type === 'boss') {
+                    this.radius = 42;
+                    this.maxHp = 800 + wave * 150;
+                    this.speed = 105;
+                    this.damage = 35 + wave * 5;
+                    this.color = '#a855f7';
+                    this.goldValue = 200;
+                    this.shootTimer = 1.5;
+                }
+
+                this.hp = this.maxHp;
+                this.attackCd = 0;
+            }
+
+            update(dt) {
+                if (!this.game.player) return;
+
+                const dx = this.game.player.x - this.x;
+                const dy = this.game.player.y - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                // Movement Logic
+                if (this.type === 'archer' && dist < 220) {
+                    // Back away if player gets too close
+                    this.x -= (dx / dist) * this.speed * dt;
+                    this.y -= (dy / dist) * this.speed * dt;
+                } else {
+                    // Pursuit Player
+                    this.x += (dx / dist) * this.speed * dt;
+                    this.y += (dy / dist) * this.speed * dt;
+                }
+
+                // Attack Logic
+                if (this.attackCd > 0) this.attackCd -= dt;
+
+                if (dist <= this.radius + this.game.player.radius + 5) {
+                    if (this.attackCd <= 0) {
+                        this.game.player.takeDamage(this.damage);
+                        this.attackCd = 1.0;
+                    }
+                }
+
+                // Archer & Boss Ranged Projectiles
+                if (this.type === 'archer' || this.type === 'boss') {
+                    this.shootTimer -= dt;
+                    if (this.shootTimer <= 0) {
+                        this.shootTimer = this.type === 'boss' ? 1.2 : 2.5;
+                        const angle = Math.atan2(dy, dx);
+                        this.game.projectiles.push(new Projectile(
+                            this.x, this.y,
+                            Math.cos(angle), Math.sin(angle),
+                            9, this.damage,
+                            false, this.color, this.game
+                        ));
+                    }
+                }
+            }
+
+            takeDamage(amount, isCrit = false) {
+                this.hp -= amount;
+                audio.playHit();
+                this.game.addFloatingText(this.x, this.y - 15, Math.round(amount), isCrit ? '#f59e0b' : '#ffffff', isCrit);
+
+                // Blood particles
+                for (let i = 0; i < 4; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    this.game.particles.push({
+                        x: this.x, y: this.y,
+                        vx: Math.cos(a) * 3, vy: Math.sin(a) * 3,
+                        color: '#991b1b', life: 0.3, size: 3
+                    });
+                }
+
+                if (this.hp <= 0) {
+                    this.dead = true;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Health Bar over Enemy
+                if (this.type !== 'boss') {
+                    const barW = this.radius * 2;
+                    const barH = 4;
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    ctx.fillRect(this.x - barW / 2, this.y - this.radius - 10, barW, barH);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(this.x - barW / 2, this.y - this.radius - 10, barW * Math.max(0, (this.hp / this.maxHp)), barH);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        /* ==========================================================================
+           6. PROJECTILE CLASS
+           ========================================================================== */
+        class Projectile {
+            constructor(x, y, vx, vy, speed, damage, isPlayerOwned, color, game) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx * speed;
+                this.vy = vy * speed;
+                this.damage = damage;
+                this.isPlayerOwned = isPlayerOwned;
+                this.color = color;
+                this.game = game;
+                this.radius = 5;
+                this.dead = false;
+                this.life = 3.0;
+            }
+
+            update(dt) {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= dt;
+
+                if (this.life <= 0 ||
+                    this.x < 0 || this.x > this.game.width ||
+                    this.y < 0 || this.y > this.game.height) {
+                    this.dead = true;
+                    return;
+                }
+
+                // Collisions
+                if (this.isPlayerOwned) {
+                    this.game.enemies.forEach(e => {
+                        if (!this.dead && Math.hypot(e.x - this.x, e.y - this.y) <= e.radius + this.radius) {
+                            e.takeDamage(this.damage);
+                            this.dead = true;
+                        }
+                    });
+                } else if (this.game.player) {
+                    const p = this.game.player;
+                    if (Math.hypot(p.x - this.x, p.y - this.y) <= p.radius + this.radius) {
+                        p.takeDamage(this.damage);
+                        this.dead = true;
+                    }
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        /* ==========================================================================
+           7. INITIALIZE GAME RUNNER
+           ========================================================================== */
+        window.onload = () => {
+            const game = new GameEngine();
+            game.run();
+        };
+    </script>
+</body>
+</html>
